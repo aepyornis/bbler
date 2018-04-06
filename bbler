@@ -10,11 +10,11 @@
 
 ##
 # default paths to housing utility programs
-set dof_reader node_modules/dof-reader/bin/dof-reader.js
-set dof_download ./lib/dof_download.py
-set job_download ./lib/job_download.py
-set pw1_download ./lib/pw1_download.py
-set job_parse ./lib/job_parse.py
+set dof_reader $BBLER_PATH/node_modules/dof-reader/bin/dof-reader.js
+set dof_download $BBLER_PATH/lib/dof_download.py
+set job_download $BBLER_PATH/lib/job_download.py
+set pw1_download $BBLER_PATH/lib/pw1_download.py
+set job_parse $BBLER_PATH/lib/job_parse.py
 
 ##
 # configuration Varaibles
@@ -51,6 +51,7 @@ mkdir -p $bbl_folder/$BBL
 # variables for files for this BBL:
 set dof_file "$bbl_folder/$BBL/tax_bills.json"
 set dobjobs_file "$bbl_folder/$BBL/dobjobs.json"
+set pluto_file "$bbl_folder/$BBL/pluto.json"
 
 # if the dof file does not exist or is empty
 if not test -s $dof_file
@@ -74,18 +75,26 @@ if not test -f $dobjobs_file
     | jq -M '.' > $dobjobs_file
 end
 
+# download pluto json
+if not test -f $pluto_file
+    curl -sS -G "https://api.nycdb.info/pluto_17v1" --data "bbl=eq.$BBL" | jq -M '.[]' > $pluto_file
+end
+
 
 set dob_job_numbers (cat $dobjobs_file | jq '.[] | .job' | sort | uniq)
 
 # Downloads department of buildings job from website
 for job_number in $dob_job_numbers
-    mkdir -p "$dob_folder/$job_number"
+    set -l job_html_file "$dob_folder/$job_number/$job_number.html"
+    set -l job_json_file "$dob_folder/$job_number/$job_number.json"
 
-    if not test -s "$dob_folder/$job_number/$job_number.html"
+    if not test -s $job_html_file
+	mkdir -p "$dob_folder/$job_number"
 	python3 $job_download $job_number $dob_folder
     end
 
-    python3 $job_parse "$dob_folder/$job_number/$job_number.html" 
-    
+    if not test -s $job_json_file
+	python3 $job_parse $job_html_file > $job_json_file
+    end
 end
 
