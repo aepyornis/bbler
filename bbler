@@ -1,0 +1,91 @@
+#!/usr/bin/env fish
+#######################
+# This is a program to download and parse NYC housing data
+# It accepts a single argument: a BBL
+#
+# It grabs information from these sources:
+#   - Tax Bills from the department of finance
+#   - job info from department of buildings
+#######################
+
+##
+# default paths to housing utility programs
+set dof_reader node_modules/dof-reader/bin/dof-reader.js
+set dof_download ./lib/dof_download.py
+set job_download ./lib/job_download.py
+set pw1_download ./lib/pw1_download.py
+set job_parse ./lib/job_parse.py
+
+##
+# configuration Varaibles
+
+set -l dob_min_date '2015-01-01'
+
+## 
+# This is the outer folder where all data is saved
+mkdir -p ~/.nyc-data
+
+## 
+# set folder variables and create them
+set dof_folder ~/.nyc-data/dof
+set dob_folder ~/.nyc-data/dob
+set bbl_folder ~/.nyc-data/bbl
+
+mkdir -p $dof_folder
+mkdir -p $dob_folder
+mkdir -p $bbl_folder
+
+
+#  Ensure first argument is a properly formated BBL
+if test (count $argv) -eq 0
+    printf "\e[31mPlease provide a BBL!\e[0m"; and exit 1
+else if not string match -q --regex '^[12345]{1}[0-9]{9}$' $argv[1]
+    printf "\e[31mInvalid BBL!\e[0m"; and exit 1
+end
+
+set BBL $argv[1]
+
+# create the folder for this bbl if it doesn't yet exist
+mkdir -p $bbl_folder/$BBL
+
+# variables for files for this BBL:
+set dof_file "$bbl_folder/$BBL/tax_bills.json"
+set dobjobs_file "$bbl_folder/$BBL/dobjobs.json"
+
+# if the dof file does not exist or is empty
+if not test -s $dof_file
+    # Download DOF data
+    python3 $dof_download $BBL $dof_folder
+    
+    set -l tmp_dof (mktemp)
+
+    # process all PDF and collect results in an json array
+    for pdf in (find $dof_folder/$BBL -type f -name '*Tax_Bill.pdf')
+	node $dof_reader $pdf >> $tmp_dof
+    end
+
+    cat $tmp_dof | jq --slurp '.' > $dof_file
+    rm $tmp_dof
+end
+
+# download dobjobs json from nycdb.info if it does not exist
+if not test -f $dobjobs_file
+    curl -sS -G "https://api.nycdb.info/dobjobs" --data "bbl=eq.$BBL" --data "jobtype=neq.A3" --data "prefilingdate=gte.$dob_min_date" \
+    | jq -M '.' > $dobjobs_file
+end
+
+
+set dob_job_numbers (cat $dobjobs_file | jq '.[] | .job' | sort | uniq)
+
+# Downloads department of buildings job from website
+for job_number in $dob_job_numbers
+    mkdir -p "$dob_folder/$job_number"
+
+    if not test -s "$dob_folder/$job_number/$job_number.html"
+	python3 $job_download $job_number $dob_folder
+    end
+
+    python3 $job_parse "$dob_folder/$job_number/$job_number.html" 
+    
+end
+
