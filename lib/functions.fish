@@ -20,3 +20,7 @@ function _setup_folder_structure
     mkdir -p ~/.nyc-data/dob
     mkdir -p ~/.nyc-data/bbl
 end
+
+function dobjobs_for -a bbl
+    cat ~/.nyc-data/bbl/$bbl/dobjobs.json | jq '.[] | .job' | sort | uniq
+end

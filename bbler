@@ -1,12 +1,28 @@
 #!/usr/bin/env fish
-#######################
+##########################################################
 # This is a program to download and parse NYC housing data
 # It accepts a single argument: a BBL
 #
 # It grabs information from these sources:
 #   - Tax Bills from the department of finance
 #   - job info from department of buildings
-#######################
+#
+#
+# in dob/[job_number]
+#      - [job_number].json -> dobjobs information about job
+#      - [job_number].html -> downloaded BIZ page for job
+#      - pw1.json  -> parsed BIZ html
+#
+# in dof[bbl] 
+#     - *.pdf -> downloaded tax bills
+#     - tax_bills.json -> array of parsed tax bills
+#
+# in bbl/[bbl] 
+#     - dobjobs.json -> dob jobs information (from dobjobs table in nycdb)
+#     - pluo.json -> json of pluto for bbl
+#     - rent_stab.json -> tax bills + compiled stats for the tax bills (see rent-stab.py)
+#     - [bbl].json -> all above json combined into one object
+##########################################################
 
 ##
 # Helper functions
@@ -28,9 +44,10 @@ set dof_download $BBLER_PATH/lib/dof_download.py
 set job_download $BBLER_PATH/lib/job_download.py
 set pw1_download $BBLER_PATH/lib/pw1_download.py
 set job_parse $BBLER_PATH/lib/job_parse.py
+set rent_stab $BBLER_PATH/lib/rent-stab.py
 
 ##
-# configuration Varaibles
+# configuration variables
 set -l dob_min_date '2015-01-01'
 
 ## 
@@ -43,9 +60,12 @@ set bbl_folder ~/.nyc-data/bbl
 mkdir -p $bbl_folder/$BBL
 
 # variables for files for this BBL:
-set dof_file "$bbl_folder/$BBL/tax_bills.json"
+set dof_file "$dof_folder/$BBL/tax_bills.json"
+set rent_stab_file "$bbl_folder/$BBL/rent_stab.json"
 set dobjobs_file "$bbl_folder/$BBL/dobjobs.json"
 set pluto_file "$bbl_folder/$BBL/pluto.json"
+# this file is an aggregate of above
+set bbl_file "$bbl_folder/$BBL/$BBL.json"
 
 # if the dof file does not exist or is empty
 if not test -s $dof_file
@@ -63,6 +83,11 @@ if not test -s $dof_file
     rm $tmp_dof
 end
 
+if not test -s $rent_stab_file
+    python3 $rent_stab $BBL | jq -M '.' > $rent_stab_file
+end
+
+
 # download dobjobs json from nycdb.info if it does not exist
 if not test -f $dobjobs_file
     curl -sS -G "https://api.nycdb.info/dobjobs" --data "bbl=eq.$BBL" --data "jobtype=neq.A3" --data "prefilingdate=gte.$dob_min_date" \
@@ -74,13 +99,13 @@ if not test -f $pluto_file
     curl -sS -G "https://api.nycdb.info/pluto_17v1" --data "bbl=eq.$BBL" | jq -M '.[]' > $pluto_file
 end
 
+set dob_job_numbers (dobjobs_for $BBL)
 
-set dob_job_numbers (cat $dobjobs_file | jq '.[] | .job' | sort | uniq)
-
-# Downloads department of buildings job from website
+# Downloads department of buildings jobs from website
 for job_number in $dob_job_numbers
     set -l job_html_file "$dob_folder/$job_number/$job_number.html"
-    set -l job_json_file "$dob_folder/$job_number/$job_number.json"
+    set -l job_json_file "$dob_folder/$job_number/pw1.json"
+    set -l dobjob_info_file "$dob_folder/$job_number/$job_number.json"
 
     if not test -s $job_html_file
 	mkdir -p "$dob_folder/$job_number"
@@ -90,5 +115,16 @@ for job_number in $dob_job_numbers
     if not test -s $job_json_file
 	python3 $job_parse $job_html_file > $job_json_file
     end
+
+    if not test -f $dobjob_info_file
+	cat $dobjobs_file | jq -M "map(select(.job == $job_number))" > $dobjob_info_file
+    end
 end
 
+if not test -f $bbl_file
+    set -l pluto (echo $BBL | jq '{pluto: . | tostring}')
+    set -l dobjobs (jq '{dobjobs: .}' $dobjobs_file)
+    set -l dofRentStab (jq '{dof: .}' $rent_stab_file)
+
+    echo "$pluto $dobjobs $dofRentStab" | jq -M --slurp 'add' > $bbl_file
+end
