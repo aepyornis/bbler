@@ -122,9 +122,10 @@ for job_number in $dob_job_numbers
 end
 
 if not test -f $bbl_file
-    set -l pluto (echo $BBL | jq '{pluto: . | tostring}')
+    set -l bbl_json (echo $BBL | jq '{bbl: . | tostring}')
+    set -l pluto (jq '{pluto: .}' $pluto_file)
     set -l dobjobs (jq '{dobjobs: .}' $dobjobs_file)
     set -l dofRentStab (jq '{dof: .}' $rent_stab_file)
 
-    echo "$pluto $dobjobs $dofRentStab" | jq -M --slurp 'add' > $bbl_file
+    echo "bbl_json $pluto $dobjobs $dofRentStab" | jq -M --slurp 'add' > $bbl_file
 end
