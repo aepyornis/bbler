@@ -1,3 +1,5 @@
 #!/usr/bin/env fish
 
 set --universal BBLER_PATH $PWD
+
+sudo ln --symbolic  -T $BBLER_PATH/bbler /usr/local/bin/bbler
