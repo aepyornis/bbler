@@ -11,14 +11,14 @@
 # in dob/[job_number]
 #      - [job_number].json -> dobjobs information about job
 #      - [job_number].html -> downloaded BIZ page for job
-#      - pw1.json  -> parsed BIZ html
+#      - pw1.json  -> parsed BIS html
 #
 # in dof[bbl] 
 #     - *.pdf -> downloaded tax bills
 #     - tax_bills.json -> array of parsed tax bills
 #
 # in bbl/[bbl] 
-#     - dobjobs.json -> dob jobs information (from dobjobs table in nycdb)
+#     - dobjobs.json n-> dob jobs information (from dobjobs table in nycdb)
 #     - pluo.json -> json of pluto for bbl
 #     - rent_stab.json -> tax bills + compiled stats for the tax bills (see rent-stab.py)
 #     - [bbl].json -> all above json combined into one object
@@ -48,7 +48,7 @@ set rent_stab $BBLER_PATH/lib/rent-stab.py
 
 ##
 # configuration variables
-set -l dob_min_date '2015-01-01'
+set -l dob_min_date '2016-01-01'
 
 ## 
 # set folder variables
@@ -69,8 +69,15 @@ set bbl_file "$bbl_folder/$BBL/$BBL.json"
 
 # if the dof file does not exist or is empty
 if not test -s $dof_file
-    # Download DOF data
-    python3 $dof_download $BBL $dof_folder
+    mkdir -p "$dof_folder/$BBL"
+
+    # Only download dof data if there are less than 9 pdfs 
+    # Later we should figure out a better to way let
+    # the program now that we want to refresh with the latest tax bills
+    if test (find "$dof_folder/$BBL" -name '*.pdf' | wc -l) -lt 9
+	# Download DOF data
+	python3 $dof_download $BBL $dof_folder
+    end
     
     set -l tmp_dof (mktemp)
 
@@ -116,16 +123,16 @@ for job_number in $dob_job_numbers
 	python3 $job_parse $job_html_file > $job_json_file
     end
 
-    if not test -f $dobjob_info_file
+    if not test -s $dobjob_info_file
 	cat $dobjobs_file | jq -M "map(select(.job == $job_number))" > $dobjob_info_file
     end
 end
 
-if not test -f $bbl_file
+if not test -s $bbl_file
     set -l bbl_json (echo $BBL | jq '{bbl: . | tostring}')
     set -l pluto (jq '{pluto: .}' $pluto_file)
     set -l dobjobs (jq '{dobjobs: .}' $dobjobs_file)
     set -l dofRentStab (jq '{dof: .}' $rent_stab_file)
 
-    echo "bbl_json $pluto $dobjobs $dofRentStab" | jq -M --slurp 'add' > $bbl_file
+    echo "$bbl_json $pluto $dobjobs $dofRentStab" | jq -M --slurp 'add' > $bbl_file
 end
