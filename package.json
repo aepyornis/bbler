@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aepyornis/lokator.git"
+    "url": "git+https://github.com/aepyornis/bbler.git"
   },
   "author": "",
   "license": "AGPL-3.0",
   "bugs": {
-    "url": "https://github.com/aepyornis/lokator/issues"
+    "url": "https://github.com/aepyornis/bbler/issues"
   },
-  "homepage": "https://github.com/aepyornis/lokator#readme",
+  "homepage": "https://github.com/aepyornis/bbler#readme",
   "dependencies": {
     "dof-reader": "0.0.3"
   }
