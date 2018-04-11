@@ -2,6 +2,7 @@
 import os
 import sys
 import requests
+import helpers
 from collections import namedtuple
 from bs4 import BeautifulSoup, NavigableString
 from pathlib import Path
@@ -10,13 +11,14 @@ from time import sleep
 USER_AGENT = 'Mozilla/5.0'
 HEADERS = {'User-Agent': USER_AGENT}
 FOLDER = 'dob-data'
-THROTTLE = 2  # seconds between download
+THROTTLE = 4  # seconds between download
 
 ##
 # URLS:
 #
 VIRTUAL_JOB_FOLDER_URL = "http://a810-bisweb.nyc.gov/bisweb/BScanVirtualJobFolderServlet?passjobnumber={}"
 DOCUMENT_URL = "http://a810-bisweb.nyc.gov/bisweb/BSCANJobDocumentContentServlet?passjobnumber={job_number}&scancode={scancode}"
+
 
 # Helper class
 DOCUMENT = namedtuple('DOCUMENT', ['scancode', 'form_id'])
@@ -27,12 +29,12 @@ DOCUMENT = namedtuple('DOCUMENT', ['scancode', 'form_id'])
 DESIRED_FORMS = set(['PW1'])
 
 
-def document_path(document, job_number, folder=FOLDER):
+def document_path(document, job_number):
     """
     Returns string path to save the document
     Creates parent folders if needed
     """
-    dir_path = Path(os.path.join(folder, job_number))
+    dir_path = Path(os.path.join(FOLDER, job_number))
     dir_path.mkdir(parents=True, exist_ok=True)
     file_name = "{}_{}.pdf".format(document.form_id, document.scancode)
     return os.path.abspath(str(dir_path.joinpath(file_name)))
@@ -44,6 +46,7 @@ def document_to_link(document, job_number):
     return DOCUMENT_URL.format(job_number=job_number, scancode=document.scancode)
 
 
+@helpers.bis_retry
 def job_folder_html(job_number):
     """
     Retrives 'virtual job folder' page via GET request.
@@ -76,7 +79,7 @@ def documents(html):
         _documents.append(DOCUMENT(scancode, form_id))
     return _documents
 
-
+@helpers.bis_retry
 def download_document(document, job_number):
     """
     Downloads and saves a document
@@ -86,10 +89,15 @@ def download_document(document, job_number):
     r = requests.get(url, headers=HEADERS, stream=True)
     r.raise_for_status()
 
+    # Sometimes an error page is returned instead of
+    # a PDF. We can detect that here and raise the error
+    if 'html' in r.headers['Content-Type']:
+        raise helpers.BisWebUnavailableException
+
     with open(document_path(document, job_number), 'wb') as f:
         for chunk in r:
                 f.write(chunk)
-
+    return True
 
 def download_documents_for_job(job_number):
     """
@@ -105,5 +113,10 @@ def download_documents_for_job(job_number):
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         raise Exception("Missing argument, job number")
+
+    try:
+        FOLDER = sys.argv[2]
+    except IndexError:
+        pass
 
     download_documents_for_job(sys.argv[1])

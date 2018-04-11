@@ -23,11 +23,7 @@ def job_url(job_number):
 def job_html(job_number):
     r = requests.get(job_url(job_number), headers=HEADERS)
     r.raise_for_status()
-    if UNAVAILABLE in r.text:
-        raise helpers.BisWebUnavailableException
-    else:
-        print("✓ {}".format(job_number))
-        return r.text
+    return r.text
 
 
 def job_file_path(job_number):
@@ -39,7 +35,7 @@ def download_job(job_number):
     if html:
         with open(job_file_path(job_number), 'w') as f:
             f.write(html)
-
+    print("✓ {}".format(job_number))
 
 def download_job_unless_file_exists(job_number):
     job = str(job_number).strip()

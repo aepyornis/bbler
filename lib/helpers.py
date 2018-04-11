@@ -6,7 +6,7 @@ import requests
 from time import sleep
 
 PAUSE_BEFORE_RETRY = 15
-
+UNAVAILABLE = 'Due to the high demand it may take a little longer'
 
 class BisWebUnavailableException(requests.exceptions.RequestException):
     pass
@@ -15,14 +15,24 @@ class BisWebUnavailableException(requests.exceptions.RequestException):
 def bis_retry(func):
     """
     A decorator for requests to BIS.
-    It retries the requests at most 3 times (waiting 15 seconds b/w each one).
+
+    If the request returns a string, it will check the text
+    to see if contains the 'unvailable' message. If it does
+    it triggers a retry.
+
+    It will retries the requests at most 3 times, waiting 15 seconds b/w each one.
     """
     def wrapper(*args, attempt=1):
         if attempt > 3:
             print("tried 3 times but failed to complete the requests", file=sys.stderr)
             return None
         try:
-            return func(*args)
+            text = func(*args)
+            if type(text) == str:
+                if UNAVAILABLE in text:
+                    raise BisWebUnavailableException
+                else:
+                    return text
         except requests.exceptions.RequestException:
             print("BIS request failed, on attempt {}. Pausing...".format(attempt), file=sys.stderr)
             sleep(PAUSE_BEFORE_RETRY)

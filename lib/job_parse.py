@@ -38,7 +38,7 @@ def job_file_path(job_number, folder='data'):
 def get_soup(path):
     if os.path.isfile(path):
         with open(path, 'r') as f:
-            return BeautifulSoup(f, "lxml")
+            return BeautifulSoup(f, "html.parser")
     else:
         raise Exception('no file found for: {}'.format(path))
 
