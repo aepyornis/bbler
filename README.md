@@ -1,7 +1,6 @@
 # BBLER
 
-Downloads and reports information about buildings in nyc.
-
+Downloads and reports information about buildings in nyc
 
 ## Setup
 
@@ -20,18 +19,42 @@ A handful of shell utilities and programs (which you may have already) are also 
 - find
 - xargs
 
-
 Install node packages: ` npm install `
 
 Install python3 packages: ` pip3 install -r requirements.txt `
 
+Install the program ` ./install `
+
+This will set a fish shell universal variable `BBLER_PATH` and make a symlink in `/usr/local/bin`
+
+## Data sources
+
+It grabs PDFs and web-pages from the Department of Finance and Department of Buildings. All other information comes from [NYCDB's api](https://github.com/aepornis/nyc-db).
 
 ## Folder structure and "database" schema
 
-The program uses the file system as a database. The top-level folder is ` ~/.nyc-data `
+The program stores all data as files. The top-level folder is ` ~/.nyc-data `
 
-Tax bills are stored in ` ~/.nyc-data/dof/[BBL] `
+in dob/[job_number]
 
-DOB permits/PW1  are stored in ` ~/.nyc-data/dob/[JOB-NUMBER] `
+    - [job_number].json -> json of information from the job
+	
+    - [job_number].html -> downloaded bis page for job
+	
+    - pw1.json  -> parsed bis html
 
-parsed json output from dob and tax bills along with other information retrived from nycdb is stored at ` ~/.nyc-data/bbl/[BBL]
+in dof/[bbl] 
+
+    - *.pdf -> downloaded tax bills
+	
+    - tax_bills.json -> array of parsed tax bills
+
+in bbl/[bbl] 
+
+    - dobjobs.json -> information about the dob (from dobjobs table in nycdb)
+	
+    - pluto.json -> json of pluto for bbl
+	
+    - rent_stab.json -> tax bills + compiled stats for the tax bills (see rent-stab.py)
+
+    - [bbl].json -> all above json combined into one object
