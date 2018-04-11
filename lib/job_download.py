@@ -2,6 +2,7 @@
 import os
 import sys
 import requests
+import helpers
 from time import sleep
 from pathlib import Path
 
@@ -12,36 +13,21 @@ FOLDER = 'data'
 UNAVAILABLE = 'Due to the high demand it may take a little longer'
 # seconds between download
 THROTTLE = 8
-PAUSE_BEFORE_RETRY = 15
+
 
 def job_url(job_number):
     return JOB_URL.format(job_number)
 
 
-class BisWebUnavailableException(requests.exceptions.RequestException):
-    pass
-
-
-def job_html(job_number, attempt=1):
-    if attempt > 3:
-        print("tried 3 times but could not download job: {}".format(job_number))
-        return None
-    try:
-        r = requests.get(job_url(job_number), headers=HEADERS)
-        r.raise_for_status()
-        if UNAVAILABLE in r.text:
-            raise BisWebUnavailableException
-        else:
-            print("✓ {}".format(job_number))
-            return r.text
-    except requests.exceptions.RequestException:
-        print("Request to download job {} failed on attempt {}. Pausing...".format(job_number, attempt))
-        sleep(PAUSE_BEFORE_RETRY)
-        return job_html(job_number, attempt=1)
-    except:
-        print("Unexpected error:", sys.exc_info()[0])
-        print("failed to download job: {}".format(job_number))
-        raise
+@helpers.bis_retry
+def job_html(job_number):
+    r = requests.get(job_url(job_number), headers=HEADERS)
+    r.raise_for_status()
+    if UNAVAILABLE in r.text:
+        raise helpers.BisWebUnavailableException
+    else:
+        print("✓ {}".format(job_number))
+        return r.text
 
 
 def job_file_path(job_number):
