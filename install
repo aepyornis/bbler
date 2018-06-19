@@ -2,4 +2,5 @@
 
 set --universal BBLER_PATH $PWD
 
+sudo rm -f /usr/local/bin/bbler
 sudo ln --symbolic  -T $BBLER_PATH/bbler /usr/local/bin/bbler
