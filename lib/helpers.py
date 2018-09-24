@@ -16,11 +16,10 @@ def bis_retry(func):
     """
     A decorator for requests to BIS.
 
-    If the request returns a string, it will check the text
-    to see if contains the 'unvailable' message. If it does
-    it triggers a retry.
+    If the request returns a string, it will check the text to see if
+    it contains the 'unavailable' message. If it does it triggers a retry.
 
-    It will retries the requests at most 3 times, waiting 15 seconds b/w each one.
+    It retries the requests at most 3 times, waiting pausing between each one.
     """
     def wrapper(*args, attempt=1):
         if attempt > 3:

@@ -6,6 +6,7 @@
 # It grabs information from these sources:
 #   - Tax Bills from the department of finance
 #   - job info from department of buildings
+#   - Pluto, Rent-stabilization data from NYCDB. (see: https://github.com/aepyornis/nycdb)
 #
 #
 # in dob/[job_number]
@@ -69,11 +70,10 @@ set bbl_file "$bbl_folder/$BBL/$BBL.json"
 if not test -s $dof_file
     mkdir -p "$dof_folder/$BBL"
 
-    # Only download dof data if there are less than 9 pdfs 
+    # Only download dof data if there are less than 9 pdfs
     # Later we should figure out a better to way let
     # the program now that we want to refresh with the latest tax bills
     if test (find "$dof_folder/$BBL" -name '*.pdf' | wc -l) -lt 9
-	# Download DOF data
 	python3 $dof_download $BBL $dof_folder
     end
     

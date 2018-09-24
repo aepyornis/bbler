@@ -79,13 +79,19 @@ def documents(html):
         _documents.append(DOCUMENT(scancode, form_id))
     return _documents
 
+
 @helpers.bis_retry
 def download_document(document, job_number):
     """
     Downloads and saves a document
     """
     url = document_to_link(document, job_number)
-    print("download url: {}".format(url))
+    print("download url: {}".format(url), file=sys.stderr)
+    file_path = document_path(document, job_number)
+    if os.path.isfile(file_path):
+        print("Document already exists, skipping", file=sys.stderr)
+        return True
+
     r = requests.get(url, headers=HEADERS, stream=True)
     r.raise_for_status()
 
@@ -94,10 +100,12 @@ def download_document(document, job_number):
     if 'html' in r.headers['Content-Type']:
         raise helpers.BisWebUnavailableException
 
-    with open(document_path(document, job_number), 'wb') as f:
+    print("Saving file to {}".format(file_path), file=sys.stderr)
+    with open(file_path, 'wb') as f:
         for chunk in r:
-                f.write(chunk)
+            f.write(chunk)
     return True
+
 
 def download_documents_for_job(job_number):
     """
@@ -105,7 +113,7 @@ def download_documents_for_job(job_number):
     """
     for doc in documents(job_folder_html(job_number)):
         if doc.form_id in DESIRED_FORMS:
-            print("Downloading {} ({})".format(doc.form_id, doc.scancode))
+            print("Downloading {} ({})".format(doc.form_id, doc.scancode), file=sys.stderr)
             download_document(doc, job_number)
             sleep(THROTTLE)
 
