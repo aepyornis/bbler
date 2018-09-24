@@ -1,6 +1,6 @@
 # BBLER
 
-Downloads and reports information about buildings in nyc
+Downloads information about any building in nyc.
 
 ## Setup
 
@@ -31,13 +31,13 @@ This will set a fish shell universal variable `BBLER_PATH` and make a symlink in
 
 It grabs PDFs and web-pages from the Department of Finance and Department of Buildings. All other information comes from [NYCDB's api](https://github.com/aepornis/nyc-db).
 
-## Folder structure and "database" schema
+## Folder structure and schema
 
-The program stores all data as files. The top-level folder is ` ~/.nyc-data `
+The program produces a number of files for any given BBL. The top-level folder is ` ~/.nyc-data `
 
 in dob/[job_number]
 
-    - [job_number].json -> json of information from the job
+    - [job_number].json -> json of information about the job
 	
     - [job_number].html -> downloaded bis page for job
 	
