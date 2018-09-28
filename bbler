@@ -66,8 +66,9 @@ set pluto_file "$bbl_folder/$BBL/pluto.json"
 # this file is an aggregate of above
 set bbl_file "$bbl_folder/$BBL/$BBL.json"
 
-# if the dof file does not exist or is empty
-if not test -s $dof_file
+if test -s $dof_file; and test (jq 'length' $dof_file) -gt 0
+    # the dof file exists, is not empty, and contains at least one entry
+else
     mkdir -p "$dof_folder/$BBL"
 
     # Only download dof data if there are less than 9 pdfs.
