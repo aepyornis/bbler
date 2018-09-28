@@ -20,7 +20,7 @@
 #
 # in bbl/[bbl] 
 #     - dobjobs.json n-> dob jobs information (from dobjobs table in nycdb)
-#     - pluo.json -> json of pluto for bbl
+#     - pluto.json -> json of pluto for bbl
 #     - rent_stab.json -> tax bills + compiled stats for the tax bills (see rent-stab.py)
 #     - [bbl].json -> all above json combined into one object
 ##########################################################
@@ -29,7 +29,7 @@
 # Helper functions
 source $BBLER_PATH/lib/functions.fish
 
-# Ensure first argument is a properly formated BBL
+# Ensure first argument is a properly formatted BBL
 verify_bbl_input $argv
 
 set BBL $argv[1]
@@ -70,9 +70,9 @@ set bbl_file "$bbl_folder/$BBL/$BBL.json"
 if not test -s $dof_file
     mkdir -p "$dof_folder/$BBL"
 
-    # Only download dof data if there are less than 9 pdfs
-    # Later we should figure out a better to way let
-    # the program now that we want to refresh with the latest tax bills
+    # Only download dof data if there are less than 9 pdfs.
+    # Later we should figure out a better skip this check
+    # in order to refresh with the latest tax bills
     if test (find "$dof_folder/$BBL" -name '*.pdf' | wc -l) -lt 9
 	python3 $dof_download $BBL $dof_folder
     end
@@ -101,7 +101,7 @@ end
 
 # download pluto json
 if not test -f $pluto_file
-    curl -sS -G "https://api.nycdb.info/pluto_17v1" --data "bbl=eq.$BBL" | jq -M '.[]' > $pluto_file
+    curl -sS -G "https://api.nycdb.info/pluto_18v1" --data "bbl=eq.$BBL" | jq -M '.[]' > $pluto_file
 end
 
 set dob_job_numbers (dobjobs_for $BBL)
