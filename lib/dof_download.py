@@ -8,18 +8,17 @@ Required libraries: requests, beautifulsoup4, dateparser
 
 Install like such: ` pip3 install requests beautifulsoup4 dateparser `
 
-Here's what going on: you submit a bbl in a form,
+Here's what is going on: you submit a bbl in a form,
 and that form returns an html document...with a form that's
 already filled out. if you submit that second form you get
 back an html document with links to the tax bills.
 
 following? those links, however, are not to the documents
-themselves but to another html page, which sadly
+themselves but just another html page, which sadly
 requires javascript to render the links to actual
-documents we are looking for! anyways, the documents
-seem to follow a pattern, so the titles of them can be
-used to generate links using the date of the document.
-
+documents we are looking for. luckily, the documents
+follow a pattern. the document titles are used to generate
+links using the date of the document.
 """
 from collections import namedtuple
 from time import sleep
@@ -127,9 +126,13 @@ def parse_intermediate_html(html):
 def get_list_html(intermediate_html):
     """
     Return the html with list of documents via post request
+
+    Last time checked, this submtis an POST request to the domain,
+    nycprop.nyc.gov, which has an invalid SSL certificate.
+    Setting verify=false ignores those SSL errors.
     """
     url, post_data = parse_intermediate_html(intermediate_html)
-    r = requests.post(url, data=post_data, headers=HEADERS)
+    r = requests.post(url, data=post_data, headers=HEADERS, verify=False)
     return r.text
 
 
@@ -251,7 +254,8 @@ def download_doc(doc, bbl):
         print("{} is from before {}".format(doc.title, MINIMUM_YEAR))
         return
 
-    r = requests.get(doc.link, headers=DOCUMENT_HEADERS, stream=True)
+    print("Attempting to download: {}".format(doc.link))
+    r = requests.get(doc.link, headers=DOCUMENT_HEADERS, stream=True, verify=False)
 
     if r.status_code == 200:
         save_file(r, doc, bbl)
